@@ -1,3 +1,5 @@
+
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +18,7 @@ int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length);
 
 int main(void)
 {
-    uint32_t x[2] = {10, 20};
+    uint32_t x[3] = {10, 20, 0};
     uint32_t y[2] = {20, 10};
     uint32_t *xy;
     accumulate(x, y, 0, 2);
@@ -33,12 +35,17 @@ int accumulate(uint32_t *dest, uint32_t *x, int offset, int length)
     for(int i = 0; i < length; i++)
     {
 	// Use 64-bit int for carry and add after casting
-	uint64_t tmp = ((uint64_t) dest[offset + i] || ((uint64_t)dest[offset + i + 1] << 32)) + (uint64_t) x[i];
+	uint64_t tmp = ((uint64_t) dest[i] | ((uint64_t)dest[i + 1] << 32));// + (uint64_t) x[offset + i];
+	tmp += (uint64_t) x[offset + i];
 	// Redivide the 64-bit over the 32-bit int array
-	dest[offset + i] = (uint32_t)(tmp & 0xffffffff);
-	dest[offset + i + 1] = (uint32_t)(tmp >> 32);
+	dest[i] = (uint32_t)(tmp & 0xffffffff);
+	dest[i + 1] = (uint32_t)(tmp >> 32);
     }   
-    return 0;
+    int i = 0;
+    while( (dest[i] != 0) && (i <= length) )
+	i++;
+
+    return i;
 }
 
 int add(uint32_t **dest, uint32_t *x, int offsetX, int lengthX, uint32_t *y, int offsetY, int lengthY)
@@ -50,15 +57,7 @@ int add(uint32_t **dest, uint32_t *x, int offsetX, int lengthX, uint32_t *y, int
 
     // Add the two numbers by calling accumulate
     accumulate( *dest, x, offsetX, lengthX );
-    accumulate( *dest, y, offsetY, lengthY );
-    int i = 0;
-    while( (dest[i] != 0) && (i < (maxLength+1)) )
-    {
-	i++;
-    }
-
-    // Done and done
-    return i;
+    return accumulate( *dest, y, offsetY, lengthY );
 }
 
 int decrease(uint32_t *dest, uint32_t *x, int offset, int length)
@@ -66,9 +65,10 @@ int decrease(uint32_t *dest, uint32_t *x, int offset, int length)
     for(int i = 0; i < length; i++)
     {
 	// Almost the same a accumulate, but now with a minus sign
-	uint64_t tmp = ((uint64_t)dest[offset + i] || ((uint64_t)dest[offset + i + 1] << 32)) - (uint64_t) x[i];
-	dest[offset + i] = (uint32_t)(tmp & 0xffffffff);
-	dest[offset + i + 1] = (uint32_t)(tmp >> 32);
+	uint64_t tmp = ((uint64_t) dest[i] | ((uint64_t)dest[i + 1] << 32)) - (uint64_t) x[offset + i];
+	// Redivide the 64-bit over the 32-bit int array
+	dest[i] = (uint32_t)(tmp & 0xffffffff);
+	dest[i + 1] = (uint32_t)(tmp >> 32);
     }
     return 0;
 }
@@ -81,10 +81,11 @@ int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length)
 
     if((length) == 1)
     {
-	printf("Final call\n");
+	printf("\tFinal call\n");
 	uint64_t tmp = (uint64_t)x[start]*(uint64_t)y[start];
 	(*dest)[0] = (uint32_t) (tmp & 0xffffffff);
 	(*dest)[1] = (uint32_t) (tmp >> 32);
+	printf("\tFinal call finished\n");
 	if( (*dest)[start+1] == 0 )
 	    return 1;
 	else
