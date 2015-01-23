@@ -11,6 +11,7 @@
  */
 
 int accumulate(uint32_t *dest, uint32_t *x, int offset, int length);
+int accumulatep(uint32_t *dest, int offsetDest, uint32_t *x, int length);
 int add(uint32_t **dest, uint32_t *x, int offsetX, int lengthX, uint32_t *y, int offsetY, int lengthY);
 int decrease(uint32_t *dest, uint32_t *x, int offset, int length);
 int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length);
@@ -19,30 +20,52 @@ int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length);
 int main(void)
 {
     uint32_t x[3] = {10, 20, 0};
-    uint32_t y[2] = {20, 10};
+    uint32_t y[2] = {20, 0};
     uint32_t *xy;
-    accumulate(x, y, 0, 2);
     multiply(&xy, x, y, 0, 2);
     printf("%d %d %d %d\n", xy[0], xy[1], xy[2], xy[3]);
+
+    uint64_t xp = 10 + ((uint64_t)20 << 32);
+    uint64_t yp = 20;
+    printf("%" PRIu64 "\n", xp*yp);
 
     return 0;
 }
 
 
-// Accumulate a value into a destination, i.e. dest += x
-int accumulate(uint32_t *dest, uint32_t *x, int offset, int length)
+
+// Accumulate a value into a destination, i.e. dest += x[offset]
+int accumulate(uint32_t *dest, uint32_t *x, int offsetX, int length)
 {
     for(int i = 0; i < length; i++)
     {
 	// Use 64-bit int for carry and add after casting
 	uint64_t tmp = ((uint64_t) dest[i] | ((uint64_t)dest[i + 1] << 32));// + (uint64_t) x[offset + i];
-	tmp += (uint64_t) x[offset + i];
+	tmp += (uint64_t) x[offsetX + i];
 	// Redivide the 64-bit over the 32-bit int array
 	dest[i] = (uint32_t)(tmp & 0xffffffff);
 	dest[i + 1] = (uint32_t)(tmp >> 32);
     }   
     int i = 0;
     while( (dest[i] != 0) && (i <= length) )
+	i++;
+
+    return i;
+}
+
+int accumulatep(uint32_t *dest, int offsetDest, uint32_t *x, int length)
+{
+    for(int i = 0; i < length; i++)
+    {
+	// Use 64-bit int for carry and add after casting
+	uint64_t tmp = ((uint64_t) dest[i+offsetDest] | ((uint64_t)dest[i + offsetDest + 1] << 32));// + (uint64_t) x[offset + i];
+	tmp += (uint64_t) x[i];
+	// Redivide the 64-bit over the 32-bit int array
+	dest[offsetDest + i] = (uint32_t)(tmp & 0xffffffff);
+	dest[offsetDest + i + 1] = (uint32_t)(tmp >> 32);
+    }   
+    int i = 0;
+    while( (dest[offsetDest + i] != 0) && ((offsetDest + i) <= length) )
 	i++;
 
     return i;
@@ -152,9 +175,9 @@ int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length)
 	    printf("%d, ", ip[i]);
 	printf("}\n");
 
-	accumulate(*dest, ac, start, lengthAC);
-	accumulate(*dest, ip, start+lengthL, lengthIP);
-	accumulate(*dest, bd, start+length, lengthBD);
+	accumulatep(*dest, start, ac, lengthAC);
+	accumulatep(*dest, start+lengthL, ip, lengthIP);
+	accumulatep(*dest, start+length, bd, lengthBD);
 
 	free(ac); free(bd); free(apb); free(cpd); free(ip);
 
