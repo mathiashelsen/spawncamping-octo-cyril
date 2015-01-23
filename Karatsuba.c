@@ -18,11 +18,11 @@ int multiply(uint32_t **dest, int store_start, uint32_t *x, uint32_t *y, int sta
 
 int main(void)
 {
-    uint32_t x[4] = {10, 20, 1};
-    uint32_t y[4] = {40, 50, 1};
+    uint32_t x[4] = {0xffffffff, 0xffffffff};
+    uint32_t y[4] = {400, 500};
     uint32_t *xy;
     //accumulate(x, 0, y, 0, 4);
-    multiply(&xy, 0, x, y, 0, 3);
+    multiply(&xy, 0, x, y, 0, 2);
     for(int i = 0; i < 6; i++)
     {
 	printf("%u ", xy[i]);
@@ -35,6 +35,8 @@ int main(void)
 
 int accumulate(uint32_t *dest, int offsetDest, uint32_t *x, int offsetX, int length)
 {
+
+	/* DANGER DANGER: THIS DOES NOT WORK PROPERLY PROBLEMS WITH OVERFLOW!!! */
     for(int i = 0; i < length; i++)
     {
 	// Use 64-bit int for carry and add after casting
