@@ -10,65 +10,43 @@
  * an efficient implementation.
  */
 
-int accumulate(uint32_t *dest, uint32_t *x, int offset, int length);
-int accumulatep(uint32_t *dest, int offsetDest, uint32_t *x, int length);
+int accumulate(uint32_t *dest, int offsetDest, uint32_t *x, int offsetX, int length);;
 int add(uint32_t **dest, uint32_t *x, int offsetX, int lengthX, uint32_t *y, int offsetY, int lengthY);
 int decrease(uint32_t *dest, uint32_t *x, int offset, int length);
-int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length);
+int multiply(uint32_t **dest, int store_start, uint32_t *x, uint32_t *y, int startxy, int length);
 
 
 int main(void)
 {
-    uint32_t x[3] = {10, 20, 0};
-    uint32_t y[2] = {20, 0};
+    uint32_t x[4] = {10, 20, 1};
+    uint32_t y[4] = {40, 50, 1};
     uint32_t *xy;
-    multiply(&xy, x, y, 0, 2);
-    printf("%d %d %d %d\n", xy[0], xy[1], xy[2], xy[3]);
-
-    uint64_t xp = 10 + ((uint64_t)20 << 32);
-    uint64_t yp = 20;
-    printf("%" PRIu64 "\n", xp*yp);
+    //accumulate(x, 0, y, 0, 4);
+    multiply(&xy, 0, x, y, 0, 3);
+    for(int i = 0; i < 6; i++)
+    {
+	printf("%u ", xy[i]);
+    }
+    printf("\n");
 
     return 0;
 }
 
 
-
-// Accumulate a value into a destination, i.e. dest += x[offset]
-int accumulate(uint32_t *dest, uint32_t *x, int offsetX, int length)
+int accumulate(uint32_t *dest, int offsetDest, uint32_t *x, int offsetX, int length)
 {
     for(int i = 0; i < length; i++)
     {
 	// Use 64-bit int for carry and add after casting
-	uint64_t tmp = ((uint64_t) dest[i] | ((uint64_t)dest[i + 1] << 32));// + (uint64_t) x[offset + i];
+	uint64_t tmp = (uint64_t) dest[i+offsetDest];
+	tmp |= ((uint64_t)dest[i + offsetDest + 1] << 32);
 	tmp += (uint64_t) x[offsetX + i];
-	// Redivide the 64-bit over the 32-bit int array
-	dest[i] = (uint32_t)(tmp & 0xffffffff);
-	dest[i + 1] = (uint32_t)(tmp >> 32);
-    }   
-    int i = 0;
-    while( (dest[i] != 0) && (i <= length) )
-	i++;
-
-    return i;
-}
-
-int accumulatep(uint32_t *dest, int offsetDest, uint32_t *x, int length)
-{
-    for(int i = 0; i < length; i++)
-    {
-	// Use 64-bit int for carry and add after casting
-	uint64_t tmp = ((uint64_t) dest[i+offsetDest] | ((uint64_t)dest[i + offsetDest + 1] << 32));// + (uint64_t) x[offset + i];
-	tmp += (uint64_t) x[i];
 	// Redivide the 64-bit over the 32-bit int array
 	dest[offsetDest + i] = (uint32_t)(tmp & 0xffffffff);
 	dest[offsetDest + i + 1] = (uint32_t)(tmp >> 32);
     }   
-    int i = 0;
-    while( (dest[offsetDest + i] != 0) && ((offsetDest + i) <= length) )
-	i++;
 
-    return i;
+    return 0;
 }
 
 int add(uint32_t **dest, uint32_t *x, int offsetX, int lengthX, uint32_t *y, int offsetY, int lengthY)
@@ -79,8 +57,13 @@ int add(uint32_t **dest, uint32_t *x, int offsetX, int lengthX, uint32_t *y, int
     memset(*dest, 0, sizeof(uint32_t)*(maxLength + 1));
 
     // Add the two numbers by calling accumulate
-    accumulate( *dest, x, offsetX, lengthX );
-    return accumulate( *dest, y, offsetY, lengthY );
+    accumulate( *dest, 0, x, offsetX, lengthX );
+    accumulate( *dest, 0, y, offsetY, lengthY );
+    int i = maxLength;
+    while( (i >= 0) && (dest[i] == 0))
+	i--;
+
+    return i;
 }
 
 int decrease(uint32_t *dest, uint32_t *x, int offset, int length)
@@ -97,17 +80,17 @@ int decrease(uint32_t *dest, uint32_t *x, int offset, int length)
 }
 
 
-int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length)
+int multiply(uint32_t **dest, int store_start, uint32_t *x, uint32_t *y, int startxy, int length)
 {
     *dest = malloc(sizeof(uint32_t)*2*length); 
     memset(*dest, 0, sizeof(uint32_t)*2*length);
 
-    if((length) == 1)
+    if(length == 1)
     {
-	uint64_t tmp = (uint64_t)x[start]*(uint64_t)y[start];
+	uint64_t tmp = (uint64_t)x[startxy]*(uint64_t)y[startxy];
 	(*dest)[0] = (uint32_t) (tmp & 0xffffffff);
 	(*dest)[1] = (uint32_t) (tmp >> 32);
-	if( (*dest)[start+1] == 0 )
+	if( (*dest)[1] == 0 )
 	    return 1;
 	else
 	    return 2;
@@ -118,28 +101,29 @@ int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length)
 	int lengthH = length - lengthL;
 	// Multiply A and C
 	uint32_t *ac, *bd, *apb, *cpd, *ip;
-
-	int lengthAC = multiply(&ac, x, y, start, lengthL);		// A*C
-	int lengthBD = multiply(&bd, x, y, start+lengthL, lengthH);	// B*D
-	int lengthAPB = add(&apb, x, start, lengthL, x, start+lengthL, lengthH);    // APB = A + B 
-	int lengthCPD = add(&cpd, y, start, lengthL, y, start+lengthL, lengthH);    // CPD = C + D
+	int lengthAPB = add(&apb, x, startxy, lengthL, x, startxy+lengthL, lengthH);    // APB = A + B 
+	int lengthCPD = add(&cpd, y, startxy, lengthL, y, startxy+lengthL, lengthH);    // CPD = C + D
 
 	int maxLength = (lengthAPB > lengthCPD) ? lengthAPB : lengthCPD;
-	int lengthIP = multiply(&ip, apb, cpd, 0, maxLength);		// IP = APB*CPD
+	int lengthIP = multiply(&ip, 0, apb, cpd, 0, maxLength);		// IP = APB*CPD
+	int lengthAC = multiply(&ac, 0, x, y, startxy, lengthL);		// A*C
+	int lengthBD = multiply(&bd, 0, x, y, startxy+lengthL, lengthH);	// B*D
 
 	decrease(ip, ac, 0, lengthAC);			// IP = IP - AC 
 	decrease(ip, bd, 0, lengthBD);			// IP = IP - BD
 
-	accumulatep(*dest, start, ac, lengthAC);
-	accumulatep(*dest, start+lengthL, ip, lengthIP);
-	accumulatep(*dest, start+length, bd, lengthBD);
+	accumulate(*dest, store_start, ac, 0, lengthAC);
+	accumulate(*dest, store_start+lengthL, ip, 0, lengthIP);
+	accumulate(*dest, store_start+2*lengthL, bd, 0, lengthBD);
 
 	free(ac); free(bd); free(apb); free(cpd); free(ip);
 
-	int i = 0;
-	while( ((*dest)[i] != 0) && (i < length*2) )
-	    i++;
+	int i = 2*length;
+	while( (i > 0) && ((*dest)[i] == 0) )
+	{
+	    i--;
+	}
 
-	return i;
+	return i+1;
     }
 }
