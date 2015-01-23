@@ -104,11 +104,9 @@ int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length)
 
     if((length) == 1)
     {
-	printf("\tFinal call\n");
 	uint64_t tmp = (uint64_t)x[start]*(uint64_t)y[start];
 	(*dest)[0] = (uint32_t) (tmp & 0xffffffff);
 	(*dest)[1] = (uint32_t) (tmp >> 32);
-	printf("\tFinal call finished\n");
 	if( (*dest)[start+1] == 0 )
 	    return 1;
 	else
@@ -121,59 +119,16 @@ int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length)
 	// Multiply A and C
 	uint32_t *ac, *bd, *apb, *cpd, *ip;
 
-	printf("x = {");
-	for(int i = 0; i < length; i++)
-	{
-	    printf("%d, ", x[start+i]);
-	}
-	printf("}\n");
-
-	printf("y = {");
-	for(int i = 0; i < length; i++)
-	{
-	    printf("%d, ", y[start+i]);
-	}
-	printf("}\n");
-
 	int lengthAC = multiply(&ac, x, y, start, lengthL);		// A*C
-	printf("ac = {");
-	for(int i  = 0; i < lengthAC; i++)
-	    printf("%d, ", ac[i]);
-	printf("}\n");
-
-
 	int lengthBD = multiply(&bd, x, y, start+lengthL, lengthH);	// B*D
-	printf("bd = {");
-	for(int i  = 0; i < lengthBD; i++)
-	    printf("%d, ", bd[i]);
-	printf("}\n");
-
 	int lengthAPB = add(&apb, x, start, lengthL, x, start+lengthL, lengthH);    // APB = A + B 
-	printf("a+b = {");
-	for(int i  = 0; i < lengthAPB; i++)
-	    printf("%d, ", apb[i]);
-	printf("}\n");
-
-
 	int lengthCPD = add(&cpd, y, start, lengthL, y, start+lengthL, lengthH);    // CPD = C + D
-	printf("c+d = {");
-	for(int i  = 0; i < lengthCPD; i++)
-	    printf("%d, ", cpd[i]);
-	printf("}\n");
 
 	int maxLength = (lengthAPB > lengthCPD) ? lengthAPB : lengthCPD;
 	int lengthIP = multiply(&ip, apb, cpd, 0, maxLength);		// IP = APB*CPD
-	printf("ip = {");
-	for(int i  = 0; i < lengthIP; i++)
-	    printf("%d, ", ip[i]);
-	printf("}\n");
 
 	decrease(ip, ac, 0, lengthAC);			// IP = IP - AC 
 	decrease(ip, bd, 0, lengthBD);			// IP = IP - BD
-	printf("(a+b)*(c+d) = {");
-	for(int i  = 0; i < lengthIP; i++)
-	    printf("%d, ", ip[i]);
-	printf("}\n");
 
 	accumulatep(*dest, start, ac, lengthAC);
 	accumulatep(*dest, start+lengthL, ip, lengthIP);
@@ -182,10 +137,9 @@ int multiply(uint32_t **dest, uint32_t *x, uint32_t *y, int start, int length)
 	free(ac); free(bd); free(apb); free(cpd); free(ip);
 
 	int i = 0;
-	while( ((*dest)[start + i] != 0) && (i < lengthH*2) )
-	{
+	while( ((*dest)[i] != 0) && (i < length*2) )
 	    i++;
-	}
+
 	return i;
     }
 }
