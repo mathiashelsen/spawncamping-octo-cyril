@@ -1,49 +1,56 @@
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define N 10
 
-int CountInversions(int *set, int length);
+#define N 100000
+
+uint64_t CountInversions(int *set, int length);
 
 int main(void)
 {
-    int numbers[10] = {10, 2, 3, 4, 7, 6, 5, 8, 9, 1};
-    /*
+    int *numbers = malloc(sizeof(int)*N);
+    char strBuf[1024];
+
+    FILE * inputFile = fopen("IntegerArray.txt", "r");
     for(int i = 0; i < N; i++)
     {
-	numbers[i] = rand() % N;
+	memset(strBuf, 0, 1024);
+	fgets(strBuf, 1024, inputFile);
+	numbers[i] = atoi(strBuf);
     }
-    */
 
-
-    printf("%d number of inversions on %d numbers\n", CountInversions(numbers, N), N);
+    printf("%" PRIu64 " number of inversions on %d numbers\n", CountInversions(numbers, N), N);
+    free(numbers);
     return 0;
 }
 
-int CountInversions(int *set, int length)
+uint64_t CountInversions(int *set, int length)
 {
     if( length == 1 )
     {
-	return 0;
+	return (uint64_t) 0;
     }
     else if( length == 2)
     {
 	if(set[0] < set[1])
 	{
-	    return 0;
+	    return (uint64_t) 0;
 	}
 	else
 	{
 	    int tmp = set[1];
 	    set[1] = set[0];
 	    set[0] = tmp;
-	    return 1;
+	    return (uint64_t) 1;
 	}
     }
     else
     {
-	int half = length/2, invs = 0;
+	int half = length/2;
+	uint64_t invs = 0;
 	int *firstHalf = malloc(sizeof(int)*half);
 	int *secondHalf = malloc(sizeof(int)*(length-half));
 	memcpy(firstHalf, set, sizeof(int)*half);
@@ -65,7 +72,7 @@ int CountInversions(int *set, int length)
 		{
 		    set[i] = secondHalf[k];
 		    k++;
-		    invs += (half-j);
+		    invs += (uint64_t) (half-j);
 		}
 	    }
 	    else if( j < half )
@@ -77,7 +84,7 @@ int CountInversions(int *set, int length)
 	    {
 		set[i] = secondHalf[k];
 		k++;
-		invs += (half-j);
+		invs += (uint64_t) (half-j);
 	    }
 	}
 	free(firstHalf); free(secondHalf);
